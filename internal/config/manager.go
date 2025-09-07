@@ -8,12 +8,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-type ServerConfig struct {
-	Address string `mapstructure:"address"`
-}
-
 type Config struct {
-	Server ServerConfig `mapstructure:"server"`
+	Logging struct {
+		Level string `mapstructure:"level"`
+	} `mapstructure:"logging"`
 }
 
 type Manager struct {

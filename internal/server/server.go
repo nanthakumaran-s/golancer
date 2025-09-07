@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"sync"
 
@@ -9,15 +10,15 @@ import (
 )
 
 type Server struct {
-	mu   sync.Mutex
+	mu   sync.RWMutex
 	cfg  *config.Config
 	addr string
 }
 
-func NewServer(cfg *config.Config) *Server {
+func NewServer(addr string, cfg *config.Config) *Server {
 	return &Server{
+		addr: addr,
 		cfg:  cfg,
-		addr: cfg.Server.Address,
 	}
 }
 
@@ -28,7 +29,7 @@ func (s *Server) Start() error {
 	}
 	defer l.Close()
 
-	fmt.Printf("listening on %s\n", s.addr)
+	fmt.Printf("[server] listening on %s\n", s.addr)
 
 	for {
 		conn, err := l.Accept()
@@ -40,12 +41,27 @@ func (s *Server) Start() error {
 	}
 }
 
-func (s *Server) handleConn(conn net.Conn) {
-	defer conn.Close()
+func (s *Server) handleConn(c net.Conn) {
+	defer c.Close()
 	buf := make([]byte, 1024)
-	n, _ := conn.Read(buf)
-	msg := string(buf[:n])
-	conn.Write([]byte("echo: " + msg))
+
+	for {
+		n, err := c.Read(buf)
+		if err != nil {
+			if err != io.EOF {
+				fmt.Println("read error:", err)
+			}
+			return
+		}
+
+		msg := string(buf[:n])
+
+		s.mu.RLock()
+		reply := fmt.Sprintf("[%s] echo: %s", s.cfg.Logging.Level, msg)
+		s.mu.RUnlock()
+
+		c.Write([]byte(reply))
+	}
 }
 
 func (s *Server) ApplyConfig(cfg *config.Config) {

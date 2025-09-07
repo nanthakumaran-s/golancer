@@ -11,10 +11,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var addr string
 var configFile string
 
 func init() {
 	rootCmd.AddCommand(startCmd)
+	startCmd.Flags().StringVarP(&addr, "port", "p", ":8080", "Port for Golancer")
 	startCmd.Flags().StringVarP(&configFile, "config", "c", "config.yaml", "Path to configuration file")
 }
 
@@ -27,7 +29,7 @@ var startCmd = &cobra.Command{
 			return err
 		}
 
-		server := server.NewServer(cfgMgr.Get())
+		server := server.NewServer(addr, cfgMgr.Get())
 
 		updates := cfgMgr.Subscribe()
 		go func() {
