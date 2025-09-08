@@ -8,41 +8,35 @@ import (
 	"github.com/spf13/viper"
 )
 
-type Config struct {
-	Logging struct {
-		Level string `mapstructure:"level"`
-	} `mapstructure:"logging"`
-}
-
 type Manager struct {
 	v    *viper.Viper
 	mu   sync.RWMutex
-	cfg  *Config
-	subs []chan *Config
+	cfg  *MutableConfig
+	subs []chan *MutableConfig
 }
 
-func NewManager(path string) (*Manager, error) {
-	v := viper.New()
-	v.SetConfigFile(path)
+func NewManager() (*Manager, error) {
+	config := viper.GetString("config")
+	viper.SetConfigFile(config)
 
-	if err := v.ReadInConfig(); err != nil {
+	if err := viper.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("read config: %w", err)
 	}
 
-	var cfg Config
-	if err := v.Unmarshal(&cfg); err != nil {
+	var cfg MutableConfig
+	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
 
 	m := &Manager{
-		v:   v,
+		v:   viper.GetViper(),
 		cfg: &cfg,
 	}
 
-	v.WatchConfig()
-	v.OnConfigChange(func(e fsnotify.Event) {
-		var nc Config
-		if err := v.Unmarshal(&nc); err != nil {
+	viper.WatchConfig()
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		var nc MutableConfig
+		if err := viper.Unmarshal(&nc); err != nil {
 			fmt.Printf("[config] reload failed: %v\n", err)
 			return
 		}
@@ -62,14 +56,14 @@ func NewManager(path string) (*Manager, error) {
 	return m, nil
 }
 
-func (m *Manager) Get() *Config {
+func (m *Manager) Get() *MutableConfig {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.cfg
 }
 
-func (m *Manager) Subscribe() <-chan *Config {
-	ch := make(chan *Config, 1)
+func (m *Manager) Subscribe() <-chan *MutableConfig {
+	ch := make(chan *MutableConfig, 1)
 	m.mu.Lock()
 	m.subs = append(m.subs, ch)
 	ch <- m.cfg
