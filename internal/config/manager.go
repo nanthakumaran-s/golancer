@@ -11,8 +11,8 @@ import (
 type Manager struct {
 	v    *viper.Viper
 	mu   sync.RWMutex
-	cfg  *MutableConfig
-	subs []chan *MutableConfig
+	cfg  *Config
+	subs []chan *Config
 }
 
 func NewManager() (*Manager, error) {
@@ -23,7 +23,7 @@ func NewManager() (*Manager, error) {
 		return nil, fmt.Errorf("read config: %w", err)
 	}
 
-	var cfg MutableConfig
+	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
@@ -35,7 +35,7 @@ func NewManager() (*Manager, error) {
 
 	viper.WatchConfig()
 	viper.OnConfigChange(func(e fsnotify.Event) {
-		var nc MutableConfig
+		var nc Config
 		if err := viper.Unmarshal(&nc); err != nil {
 			fmt.Printf("[config] reload failed: %v\n", err)
 			return
@@ -56,14 +56,14 @@ func NewManager() (*Manager, error) {
 	return m, nil
 }
 
-func (m *Manager) Get() *MutableConfig {
+func (m *Manager) Get() *Config {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.cfg
 }
 
-func (m *Manager) Subscribe() <-chan *MutableConfig {
-	ch := make(chan *MutableConfig, 1)
+func (m *Manager) Subscribe() <-chan *Config {
+	ch := make(chan *Config, 1)
 	m.mu.Lock()
 	m.subs = append(m.subs, ch)
 	ch <- m.cfg

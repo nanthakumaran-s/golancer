@@ -1,11 +1,11 @@
 package config
 
-type ImmutableConfig struct {
+type ServerDefaults struct {
 	Port   int
 	UseTLS bool
 }
 
-type MutableConfig struct {
+type Config struct {
 	Logging struct {
 		Level string `mapstructure:"level"`
 	} `mapstructure:"logging"`

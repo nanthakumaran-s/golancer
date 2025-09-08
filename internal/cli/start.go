@@ -38,7 +38,7 @@ var startCmd = &cobra.Command{
 
 		port := viper.GetInt("port")
 
-		imm := &config.ImmutableConfig{
+		imm := &config.ServerDefaults{
 			Port: port,
 		}
 
