@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -45,6 +46,8 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	out.URL.Host = be.URL.Host
 	out.URL.Path = join(be.URL.Path, req.URL.Path)
 
+	out.Host = be.URL.Host
+
 	if be.URL.RawQuery == "" || req.URL.RawQuery == "" {
 		out.URL.RawQuery = be.URL.RawQuery + req.URL.RawQuery
 	} else {
@@ -60,6 +63,9 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		defer cancel()
 		out = out.WithContext(ctx)
 	}
+
+	fmt.Printf("Incoming:  %s %s Host=%s\n", req.Method, req.URL.String(), req.Host)
+	fmt.Printf("Outgoing:  %s %s Host=%s\n", out.Method, out.URL.String(), out.Host)
 
 	resp, err := st.Transport.RoundTrip(out)
 	if err != nil {
