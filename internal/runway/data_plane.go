@@ -1,25 +1,20 @@
 package runway
 
 import (
-	"context"
+	"crypto/tls"
 	"fmt"
-	"net"
 	"net/http"
-	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/nanthakumaran-s/golancer/internal/config"
 	"github.com/nanthakumaran-s/golancer/internal/proxy"
+	"github.com/nanthakumaran-s/golancer/internal/utils"
 )
 
 type DataPlane struct {
 	srv         *config.ServerDefaults
 	cfg         atomic.Value
 	httpHandler *proxy.AtomicHandler
-	listener    net.Listener
-	server      *http.Server
-	stopOnce    sync.Once
 	stopCh      chan struct{}
 }
 
@@ -54,44 +49,32 @@ func (dp *DataPlane) UpdateHttpHandler(h http.Handler) {
 func (dp *DataPlane) Start() {
 	addr := fmt.Sprintf(":%d", dp.srv.Port)
 
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		panic(fmt.Sprintf("[dataplane] failed to bind %s: %v", addr, err))
+	server := &http.Server{
+		Addr:    addr,
+		Handler: dp.httpHandler,
 	}
-	dp.listener = ln
-
-	if dp.httpHandler == nil {
-		dp.httpHandler = proxy.NewAtomicHandler(nil)
-	}
-
-	dp.server = &http.Server{
-		Handler:           dp.httpHandler,
-		ReadHeaderTimeout: 10 * time.Second,
-	}
-
-	fmt.Println("[dataplane] listening on", addr)
 
 	go func() {
-		if err := dp.server.Serve(ln); err != nil && err != http.ErrServerClosed {
-			fmt.Println("[dataplane] http server error:", err)
+		if dp.srv.UseTLS {
+			if dp.srv.Local {
+				cert, err := utils.GenerateSelfSignedCert()
+				if err != nil {
+					panic(err)
+				}
+
+				server.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cert}}
+				fmt.Println("[dataplane] listening with self-signed TLS on", addr)
+				server.ListenAndServeTLS("", "")
+			} else {
+				// TODO: AutoCert implementation
+			}
+		} else {
+			fmt.Println("[dataplane] listening on", addr)
+			server.ListenAndServe()
 		}
 	}()
 }
 
 func (dp *DataPlane) Stop() {
-	dp.stopOnce.Do(func() {
-		close(dp.stopCh)
-
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		if dp.server != nil {
-			if err := dp.server.Shutdown(ctx); err != nil {
-				fmt.Println("[dataplane] graceful shutdown error:", err)
-			}
-		}
-
-		if dp.listener != nil {
-			_ = dp.listener.Close()
-		}
-	})
+	close(dp.stopCh)
 }

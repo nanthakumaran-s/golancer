@@ -103,7 +103,7 @@ func (cp *ControlPlane) Stop() {
 }
 
 func buildRouterState(cfg *config.Config) (*proxy.RouterState, error) {
-	tr := proxy.NewTransport(cfg.Proxy.MaxIdleConnections, cfg.Proxy.IdleConnectionTimeout)
+	tr := proxy.NewTransport(cfg.Proxy.MaxIdleConns, cfg.Proxy.IdleConnTimeout)
 	rs := &proxy.RouterState{
 		Transport: tr,
 		Timeout:   cfg.Proxy.DefaultTimeout,

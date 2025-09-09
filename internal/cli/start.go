@@ -14,16 +14,24 @@ import (
 	"github.com/spf13/viper"
 )
 
-var addr string
-var configFile string
+var (
+	addr       int
+	configFile string
+	useTLS     bool
+	local      bool
+)
 
 func init() {
 	rootCmd.AddCommand(startCmd)
-	startCmd.Flags().StringVarP(&addr, "port", "p", "8080", "Port for Golancer")
+	startCmd.Flags().IntVarP(&addr, "port", "p", 8080, "Port for Golancer")
 	startCmd.Flags().StringVarP(&configFile, "config", "c", "config.yaml", "Path to configuration file")
+	startCmd.Flags().BoolVarP(&useTLS, "useTLS", "", false, "Set Golancer to use TLS")
+	startCmd.Flags().BoolVarP(&local, "local", "", false, "Set Golancer in local development mode")
 
 	_ = viper.BindPFlag("port", startCmd.Flags().Lookup("port"))
 	_ = viper.BindPFlag("config", startCmd.Flags().Lookup("config"))
+	_ = viper.BindPFlag("useTLS", startCmd.Flags().Lookup("useTLS"))
+	_ = viper.BindPFlag("local", startCmd.Flags().Lookup("local"))
 }
 
 var startCmd = &cobra.Command{
@@ -36,10 +44,10 @@ var startCmd = &cobra.Command{
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
-		port := viper.GetInt("port")
-
 		imm := &config.ServerDefaults{
-			Port: port,
+			Port:   addr,
+			UseTLS: useTLS,
+			Local:  local,
 		}
 
 		dp := runway.NewDataPlane(imm)

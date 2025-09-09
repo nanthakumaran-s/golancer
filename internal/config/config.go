@@ -5,12 +5,13 @@ import "time"
 type ServerDefaults struct {
 	Port   int
 	UseTLS bool
+	Local  bool
 }
 
 type Proxy struct {
-	DefaultTimeout        time.Duration `mapstructure:"default_timeout"`
-	MaxIdleConnections    int           `mapstructure:"max_idle_connections"`
-	IdleConnectionTimeout time.Duration `mapstructure:"idle_connection_timeout"`
+	DefaultTimeout  time.Duration `mapstructure:"default_timeout"`
+	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
+	IdleConnTimeout time.Duration `mapstructure:"idle_conn_timeout"`
 }
 
 type Match struct {
