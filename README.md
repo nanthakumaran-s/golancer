@@ -44,11 +44,11 @@ go run ./cmd/golancer start --port 8080 --config config.yaml
 
 Flags:
 
-- `--port` or `--p`: Port to run Golancer. `Default: 8080`
-- `--config` or `--c`: Config file path to listen. `Default: config.yaml`
+- `--port` or `-p`: Port to run Golancer. `Default: 8080`
+- `--config` or `-c`: Config file path to listen. `Default: config.yaml`
 - `--useTLS`: Use Golancer in TLS mode. `Default: false`
 - `--local`: Set Golancer in local development mode. `Default: false`
-- `--logFile` or `--l`: Log file path to write. Default: `golancer.log`
+- `--logFile` or `-l`: Log file path to write. Default: `golancer.log`
 
 ## Configuration Guide
 
