@@ -8,6 +8,7 @@ import (
 	"github.com/nanthakumaran-s/golancer/internal/config"
 	"github.com/nanthakumaran-s/golancer/internal/proxy"
 	"github.com/nanthakumaran-s/golancer/internal/runway"
+	"github.com/nanthakumaran-s/golancer/internal/utils"
 )
 
 type ControlPlane struct {
@@ -15,6 +16,7 @@ type ControlPlane struct {
 	done       chan struct{}
 	dataplane  *runway.DataPlane
 	cfgManager *config.Manager
+	logger     *utils.Logger
 }
 
 func NewControlPlane(dp *runway.DataPlane) *ControlPlane {
@@ -26,21 +28,30 @@ func NewControlPlane(dp *runway.DataPlane) *ControlPlane {
 }
 
 func (cp *ControlPlane) Start(ctx context.Context) {
-	cfgManager, err := config.NewManager()
+	logger, err := utils.NewLogger()
 	if err != nil {
-		panic(fmt.Sprintf("failed to init config manager: %v", err))
+		panic(fmt.Sprintf("failed to init logger: %v", err))
+	}
+	logger.Start()
+	cp.logger = logger
+	cp.dataplane.SetLogger(logger)
+
+	cp.logger.Info(utils.CONTROL_PLANE, "golancer logger Initialized")
+
+	cfgManager, err := config.NewManager(cp.logger)
+	if err != nil {
+		cp.logger.Fatal("failed to init config manager: %v", err)
 	}
 	cp.cfgManager = cfgManager
 
 	initial := cp.cfgManager.Get()
 	if initial == nil {
-		panic(fmt.Sprintf("failed to init config manager: %v", err))
+		cp.logger.Fatal("failed to init config manager: %v", err)
 	}
-	cp.dataplane.UpdateConfig(initial)
 
 	rs, err := buildRouterState(cp.cfgManager.Get())
 	if err != nil {
-		panic(fmt.Sprintf("failed to build initial router state: %v", err))
+		cp.logger.Fatal("failed to build initial router state: %v", err)
 	}
 	cp.dataplane.UpdateHttpHandler(&proxy.Router{State: rs})
 
@@ -59,18 +70,19 @@ func (cp *ControlPlane) Start(ctx context.Context) {
 					if m.NewConfig == nil {
 						continue
 					}
-					fmt.Println("[control] apply config (from mailbox)")
+					cp.logger.Info(utils.CONTROL_PLANE, "apply config (from mailbox)")
 					cp.dataplane.UpdateConfig(m.NewConfig)
 					if rs, err := buildRouterState(m.NewConfig); err == nil {
 						cp.dataplane.UpdateHttpHandler(&proxy.Router{State: rs})
-						fmt.Println("[control] router state swapped")
+						cp.logger.Info(utils.CONTROL_PLANE, "router state swapped")
 					} else {
-						fmt.Println("[control] buildRouterState error:", err)
+						cp.logger.Warn(utils.CONTROL_PLANE, fmt.Sprintln("buildRouterState error:", err))
 					}
 
 				case Shutdown:
-					fmt.Println("[control] Shutdown requested")
+					cp.logger.Info(utils.CONTROL_PLANE, "shutdown requested (from mailbox)")
 					cp.dataplane.Stop()
+					cp.logger.Stop()
 					close(cp.done)
 					return
 				}
@@ -84,8 +96,9 @@ func (cp *ControlPlane) Start(ctx context.Context) {
 				}
 
 			case <-ctx.Done():
-				fmt.Println("[control] context cancelled, shutting down")
+				cp.logger.Info(utils.CONTROL_PLANE, "context cancelled, shutting down")
 				cp.dataplane.Stop()
+				cp.logger.Stop()
 				close(cp.done)
 				return
 			}

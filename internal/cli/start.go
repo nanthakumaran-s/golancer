@@ -10,6 +10,7 @@ import (
 	"github.com/nanthakumaran-s/golancer/internal/config"
 	"github.com/nanthakumaran-s/golancer/internal/runway"
 	"github.com/nanthakumaran-s/golancer/internal/tower"
+	"github.com/nanthakumaran-s/golancer/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -19,19 +20,22 @@ var (
 	configFile string
 	useTLS     bool
 	local      bool
+	logFile    string
 )
 
 func init() {
 	rootCmd.AddCommand(startCmd)
-	startCmd.Flags().IntVarP(&addr, "port", "p", 8080, "Port for Golancer")
-	startCmd.Flags().StringVarP(&configFile, "config", "c", "config.yaml", "Path to configuration file")
-	startCmd.Flags().BoolVarP(&useTLS, "useTLS", "", false, "Set Golancer to use TLS")
-	startCmd.Flags().BoolVarP(&local, "local", "", false, "Set Golancer in local development mode")
+	startCmd.Flags().IntVarP(&addr, utils.PORT, "p", 8080, "Port for Golancer")
+	startCmd.Flags().StringVarP(&configFile, utils.CONFIG, "c", "config.yaml", "Path to configuration file")
+	startCmd.Flags().BoolVarP(&useTLS, utils.UseTLS, "", false, "Set Golancer to use TLS")
+	startCmd.Flags().BoolVarP(&local, utils.Local, "", false, "Set Golancer in local development mode")
+	startCmd.Flags().StringVarP(&logFile, utils.LogFile, "l", "golancer.log", "Set Golancer logging file")
 
-	_ = viper.BindPFlag("port", startCmd.Flags().Lookup("port"))
-	_ = viper.BindPFlag("config", startCmd.Flags().Lookup("config"))
-	_ = viper.BindPFlag("useTLS", startCmd.Flags().Lookup("useTLS"))
-	_ = viper.BindPFlag("local", startCmd.Flags().Lookup("local"))
+	_ = viper.BindPFlag(utils.PORT, startCmd.Flags().Lookup(utils.PORT))
+	_ = viper.BindPFlag(utils.CONFIG, startCmd.Flags().Lookup(utils.CONFIG))
+	_ = viper.BindPFlag(utils.UseTLS, startCmd.Flags().Lookup(utils.UseTLS))
+	_ = viper.BindPFlag(utils.Local, startCmd.Flags().Lookup(utils.Local))
+	_ = viper.BindPFlag(utils.LogFile, startCmd.Flags().Lookup(utils.LogFile))
 }
 
 var startCmd = &cobra.Command{

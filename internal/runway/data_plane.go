@@ -15,6 +15,7 @@ type DataPlane struct {
 	srv         *config.ServerDefaults
 	cfg         atomic.Value
 	httpHandler *proxy.AtomicHandler
+	logger      *utils.Logger
 	stopCh      chan struct{}
 }
 
@@ -30,7 +31,7 @@ func (dp *DataPlane) UpdateConfig(cfg *config.Config) {
 		return
 	}
 	dp.cfg.Store(cfg)
-	fmt.Printf("[dataplane] hot config updated -> %+v\n", cfg)
+	dp.logger.Info(utils.DATA_PLANE, fmt.Sprintf("hot config updated -> %+v\n", cfg))
 }
 
 func (dp *DataPlane) UpdateHttpHandler(h http.Handler) {
@@ -44,6 +45,14 @@ func (dp *DataPlane) UpdateHttpHandler(h http.Handler) {
 	}
 
 	dp.httpHandler.Swap(h)
+}
+
+func (dp *DataPlane) SetLogger(lg *utils.Logger) {
+	if dp.logger != nil {
+		return
+	}
+
+	dp.logger = lg
 }
 
 func (dp *DataPlane) Start() {
@@ -63,13 +72,13 @@ func (dp *DataPlane) Start() {
 				}
 
 				server.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cert}}
-				fmt.Println("[dataplane] listening with self-signed TLS on", addr)
+				dp.logger.Info(utils.DATA_PLANE, fmt.Sprintln("listening with self-signed TLS on", addr))
 				server.ListenAndServeTLS("", "")
 			} else {
 				// TODO: AutoCert implementation
 			}
 		} else {
-			fmt.Println("[dataplane] listening on", addr)
+			dp.logger.Info(utils.DATA_PLANE, fmt.Sprintln("listening on", addr))
 			server.ListenAndServe()
 		}
 	}()

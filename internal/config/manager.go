@@ -5,18 +5,20 @@ import (
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/nanthakumaran-s/golancer/internal/utils"
 	"github.com/spf13/viper"
 )
 
 type Manager struct {
-	v    *viper.Viper
-	mu   sync.RWMutex
-	cfg  *Config
-	subs []chan *Config
+	v      *viper.Viper
+	mu     sync.RWMutex
+	cfg    *Config
+	logger *utils.Logger
+	subs   []chan *Config
 }
 
-func NewManager() (*Manager, error) {
-	config := viper.GetString("config")
+func NewManager(lg *utils.Logger) (*Manager, error) {
+	config := viper.GetString(utils.CONFIG)
 	viper.SetConfigFile(config)
 
 	if err := viper.ReadInConfig(); err != nil {
@@ -29,15 +31,16 @@ func NewManager() (*Manager, error) {
 	}
 
 	m := &Manager{
-		v:   viper.GetViper(),
-		cfg: &cfg,
+		v:      viper.GetViper(),
+		cfg:    &cfg,
+		logger: lg,
 	}
 
 	viper.WatchConfig()
 	viper.OnConfigChange(func(e fsnotify.Event) {
 		var nc Config
 		if err := viper.Unmarshal(&nc); err != nil {
-			fmt.Printf("[config] reload failed: %v\n", err)
+			m.logger.Warn(utils.CONFIG_MANAGER, fmt.Sprintf("reload failed: %v\n", err))
 			return
 		}
 
@@ -50,7 +53,7 @@ func NewManager() (*Manager, error) {
 			}
 		}
 		m.mu.Unlock()
-		fmt.Printf("[config] reloaded from %s\n", e.Name)
+		m.logger.Info(utils.CONFIG_MANAGER, fmt.Sprintf("reloaded from %s\n", e.Name))
 	})
 
 	return m, nil
