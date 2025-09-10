@@ -8,10 +8,13 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/nanthakumaran-s/golancer/internal/utils"
 )
 
 type Router struct {
-	State *RouterState
+	State  *RouterState
+	Logger *utils.Logger
 }
 
 func NewTransport(maxIdle int, idleTimeout time.Duration) *http.Transport {
@@ -64,15 +67,26 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		out = out.WithContext(ctx)
 	}
 
-	fmt.Printf("Incoming:  %s %s Host=%s\n", req.Method, req.URL.String(), req.Host)
-	fmt.Printf("Outgoing:  %s %s Host=%s\n", out.Method, out.URL.String(), out.Host)
-
+	start := time.Now()
 	resp, err := st.Transport.RoundTrip(out)
+	elapsed := time.Since(start)
+
 	if err != nil {
+		r.Logger.Error(utils.ROUTER,
+			fmt.Sprintf("outgoing %s %s %s failed in %v",
+				out.Method, out.URL.String(), out.Host, elapsed))
 		http.Error(w, "Bad Gateway", http.StatusBadGateway)
 		return
 	}
 	defer resp.Body.Close()
+
+	r.Logger.Info(
+		utils.ROUTER,
+		fmt.Sprintf(
+			"%s %s %s -> %s %s %d %s in %v",
+			req.Method, req.URL.Path, req.Host, out.URL.Path, out.Host, resp.StatusCode, http.StatusText(resp.StatusCode), elapsed,
+		),
+	)
 
 	copyHeader(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)

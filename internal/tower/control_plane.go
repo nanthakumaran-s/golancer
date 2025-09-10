@@ -53,7 +53,7 @@ func (cp *ControlPlane) Start(ctx context.Context) {
 	if err != nil {
 		cp.logger.Fatal("failed to build initial router state: %v", err)
 	}
-	cp.dataplane.UpdateHttpHandler(&proxy.Router{State: rs})
+	cp.dataplane.UpdateHttpHandler(&proxy.Router{State: rs, Logger: cp.logger})
 
 	cp.dataplane.Start()
 
@@ -73,7 +73,7 @@ func (cp *ControlPlane) Start(ctx context.Context) {
 					cp.logger.Info(utils.CONTROL_PLANE, "apply config (from mailbox)")
 					cp.dataplane.UpdateConfig(m.NewConfig)
 					if rs, err := buildRouterState(m.NewConfig); err == nil {
-						cp.dataplane.UpdateHttpHandler(&proxy.Router{State: rs})
+						cp.dataplane.UpdateHttpHandler(&proxy.Router{State: rs, Logger: cp.logger})
 						cp.logger.Info(utils.CONTROL_PLANE, "router state swapped")
 					} else {
 						cp.logger.Warn(utils.CONTROL_PLANE, fmt.Sprintln("buildRouterState error:", err))

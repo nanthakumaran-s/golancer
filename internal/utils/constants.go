@@ -12,4 +12,5 @@ const (
 	CONTROL_PLANE  = "controlplane"
 	DATA_PLANE     = "dataplane"
 	CONFIG_MANAGER = "config"
+	ROUTER         = "router"
 )
